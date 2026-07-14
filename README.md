@@ -232,7 +232,27 @@ chmod +x setup_vps.sh
 ```
 Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), khởi tạo môi trường ảo Python (`venv`), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8000`.
 
-### 2. Các Endpoint API sử dụng
+### 2. Kiểm tra thông tin VPS & cấu hình Tường lửa (Firewall)
+*   **Lấy IP công cộng của VPS:**
+    ```bash
+    curl ifconfig.me
+    ```
+*   **Kiểm tra Port 8000 đã hoạt động (LISTEN) chưa:**
+    ```bash
+    sudo ss -tulnp | grep 8000
+    ```
+*   **Mở Port 8000 trên tường lửa VPS (nếu bị chặn):**
+    *   **Ubuntu / Debian (UFW):**
+        ```bash
+        sudo ufw allow 8000/tcp && sudo ufw reload
+        ```
+    *   **CentOS / RHEL (Firewalld):**
+        ```bash
+        sudo firewall-cmd --permanent --add-port=8000/tcp && sudo firewall-cmd --reload
+        ```
+
+### 3. Các Endpoint API sử dụng
+
 
 Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8000`):
 

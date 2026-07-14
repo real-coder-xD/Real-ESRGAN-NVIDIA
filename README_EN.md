@@ -243,7 +243,27 @@ chmod +x setup_vps.sh
 ```
 The script automatically installs system dependencies (`ffmpeg`), creates a Python virtual environment (`venv`), auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8000`.
 
-### 2. Available API Endpoints
+### 2. Checking VPS Information & Firewall Configuration
+*   **Get VPS Public IP:**
+    ```bash
+    curl ifconfig.me
+    ```
+*   **Check if Port 8000 is listening:**
+    ```bash
+    sudo ss -tulnp | grep 8000
+    ```
+*   **Open Port 8000 on VPS Firewall (if blocked):**
+    *   **Ubuntu / Debian (UFW):**
+        ```bash
+        sudo ufw allow 8000/tcp && sudo ufw reload
+        ```
+    *   **CentOS / RHEL (Firewalld):**
+        ```bash
+        sudo firewall-cmd --permanent --add-port=8000/tcp && sudo firewall-cmd --reload
+        ```
+
+### 3. Available API Endpoints
+
 
 Assuming your VPS IP is `123.45.67.89` (default port `8000`):
 
