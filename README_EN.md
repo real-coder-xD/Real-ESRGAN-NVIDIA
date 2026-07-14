@@ -241,7 +241,7 @@ cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-The script automatically installs system dependencies (`ffmpeg`), installs global Python dependencies, auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8000`.
+The script automatically installs system dependencies (`ffmpeg`), installs global Python dependencies, auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8080`.
 
 
 ### 2. Checking VPS Information & Firewall Configuration
@@ -249,28 +249,28 @@ The script automatically installs system dependencies (`ffmpeg`), installs globa
     ```bash
     curl ifconfig.me
     ```
-*   **Check if Port 8000 is listening:**
+*   **Check if Port 8080 is listening:**
     ```bash
-    sudo ss -tulnp | grep 8000
+    sudo ss -tulnp | grep 8080
     ```
-*   **Open Port 8000 on VPS Firewall (if blocked):**
+*   **Open Port 8080 on VPS Firewall (if blocked):**
     *   **Ubuntu / Debian (UFW):**
         ```bash
-        sudo ufw allow 8000/tcp && sudo ufw reload
+        sudo ufw allow 8080/tcp && sudo ufw reload
         ```
     *   **CentOS / RHEL (Firewalld):**
         ```bash
-        sudo firewall-cmd --permanent --add-port=8000/tcp && sudo firewall-cmd --reload
+        sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload
         ```
 
 ### 3. Available API Endpoints
 
 
-Assuming your VPS IP is `123.45.67.89` (default port `8000`):
+Assuming your VPS IP is `123.45.67.89` (default port `8080`):
 
 *   **Upload Video for Processing**
     *   **Method:** `POST`
-    *   **URL:** `http://123.45.67.89:8000/upload`
+    *   **URL:** `http://123.45.67.89:8080/upload`
     *   **Body (form-data):**
         *   `file`: (Select video file)
         *   `model_name`: `RealESRGAN_x4plus` (default)
@@ -288,7 +288,7 @@ Assuming your VPS IP is `123.45.67.89` (default port `8000`):
 
 *   **Check Task Progress (Status)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}`
+    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}`
     *   **Response:**
         ```json
         {
@@ -301,7 +301,7 @@ Assuming your VPS IP is `123.45.67.89` (default port `8000`):
 
 *   **Download Completed Video (Download)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}/download`
+    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}/download`
     *   **Response:** The output `.mp4` file.
 
 ---

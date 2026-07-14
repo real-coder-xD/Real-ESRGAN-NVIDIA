@@ -230,7 +230,7 @@ cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), cài đặt các thư viện Python toàn cục (global), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8000`.
+Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), cài đặt các thư viện Python toàn cục (global), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8080`.
 
 
 ### 2. Kiểm tra thông tin VPS & cấu hình Tường lửa (Firewall)
@@ -238,28 +238,28 @@ Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpe
     ```bash
     curl ifconfig.me
     ```
-*   **Kiểm tra Port 8000 đã hoạt động (LISTEN) chưa:**
+*   **Kiểm tra Port 8080 đã hoạt động (LISTEN) chưa:**
     ```bash
-    sudo ss -tulnp | grep 8000
+    sudo ss -tulnp | grep 8080
     ```
-*   **Mở Port 8000 trên tường lửa VPS (nếu bị chặn):**
+*   **Mở Port 8080 trên tường lửa VPS (nếu bị chặn):**
     *   **Ubuntu / Debian (UFW):**
         ```bash
-        sudo ufw allow 8000/tcp && sudo ufw reload
+        sudo ufw allow 8080/tcp && sudo ufw reload
         ```
     *   **CentOS / RHEL (Firewalld):**
         ```bash
-        sudo firewall-cmd --permanent --add-port=8000/tcp && sudo firewall-cmd --reload
+        sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload
         ```
 
 ### 3. Các Endpoint API sử dụng
 
 
-Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8000`):
+Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8080`):
 
 *   **Gửi video cần xử lý (Upload)**
     *   **Method:** `POST`
-    *   **URL:** `http://123.45.67.89:8000/upload`
+    *   **URL:** `http://123.45.67.89:8080/upload`
     *   **Body (form-data):**
         *   `file`: (Chọn file video)
         *   `model_name`: `RealESRGAN_x4plus` (mặc định)
@@ -277,7 +277,7 @@ Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8000`):
 
 *   **Kiểm tra tiến trình (Status)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}`
+    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}`
     *   **Response:**
         ```json
         {
@@ -290,7 +290,7 @@ Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8000`):
 
 *   **Tải xuống video hoàn tất (Download)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}/download`
+    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}/download`
     *   **Response:** File video `.mp4` đầu ra.
 
 ---

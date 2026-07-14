@@ -70,7 +70,7 @@ sudo systemctl start esrgan
 
 echo "===================================================="
 echo "    SETUP HOAN TAT!"
-echo "    - API dang chay ngam qua systemd port 8000."
+echo "    - API dang chay ngam qua systemd port 8080."
 echo "    - Kiem tra trang thai service: sudo systemctl status esrgan"
 echo "    - Xem log thoi gian thuc: journalctl -u esrgan -f"
 echo "===================================================="
