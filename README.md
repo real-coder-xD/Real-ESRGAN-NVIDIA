@@ -218,7 +218,64 @@ Kết quả sẽ được lưu trong thư mục `results`.
 
 ---
 
+## 🌐 API Worker & Deploy VPS
+
+Dự án tích hợp sẵn một API Worker để nhận diện, xử lý và nâng cấp chất lượng video tự động từ xa.
+
+### 1. Hướng dẫn thiết lập nhanh trên VPS
+Chỉ cần chạy lệnh sau trên VPS chạy hệ điều hành Ubuntu/Debian:
+```bash
+git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
+cd Real-ESRGAN-NVIDIA
+chmod +x setup_vps.sh
+./setup_vps.sh
+```
+Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), khởi tạo môi trường ảo Python (`venv`), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8000`.
+
+### 2. Các Endpoint API sử dụng
+
+Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8000`):
+
+*   **Gửi video cần xử lý (Upload)**
+    *   **Method:** `POST`
+    *   **URL:** `http://123.45.67.89:8000/upload`
+    *   **Body (form-data):**
+        *   `file`: (Chọn file video)
+        *   `model_name`: `RealESRGAN_x4plus` (mặc định)
+        *   `upscale`: `2` (mặc định)
+        *   `tile`: `512` (mặc định)
+        *   `target_w`: (Kích thước ngang mong muốn, tùy chọn)
+        *   `target_h`: (Kích thước dọc mong muốn, tùy chọn)
+    *   **Response:**
+        ```json
+        {
+          "task_id": "chuỗi-uuid",
+          "status": "pending"
+        }
+        ```
+
+*   **Kiểm tra tiến trình (Status)**
+    *   **Method:** `GET`
+    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}`
+    *   **Response:**
+        ```json
+        {
+          "task_id": "chuỗi-uuid",
+          "status": "processing",
+          "progress": 45,
+          "error": null
+        }
+        ```
+
+*   **Tải xuống video hoàn tất (Download)**
+    *   **Method:** `GET`
+    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}/download`
+    *   **Response:** File video `.mp4` đầu ra.
+
+---
+
 ## BibTeX
+
 
     @InProceedings{wang2021realesrgan,
         author    = {Xintao Wang and Liangbin Xie and Chao Dong and Ying Shan},

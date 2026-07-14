@@ -229,6 +229,62 @@ Results are in the `results` folder
 
 ---
 
+## 🌐 API Worker & Deploy VPS
+
+The project is integrated with an API Worker to receive, process, and upscale videos automatically from remote clients.
+
+### 1. Quick Setup Guide on VPS
+Run the following commands on your Ubuntu/Debian VPS:
+```bash
+git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
+cd Real-ESRGAN-NVIDIA
+chmod +x setup_vps.sh
+./setup_vps.sh
+```
+The script automatically installs system dependencies (`ffmpeg`), creates a Python virtual environment (`venv`), auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8000`.
+
+### 2. Available API Endpoints
+
+Assuming your VPS IP is `123.45.67.89` (default port `8000`):
+
+*   **Upload Video for Processing**
+    *   **Method:** `POST`
+    *   **URL:** `http://123.45.67.89:8000/upload`
+    *   **Body (form-data):**
+        *   `file`: (Select video file)
+        *   `model_name`: `RealESRGAN_x4plus` (default)
+        *   `upscale`: `2` (default)
+        *   `tile`: `512` (default)
+        *   `target_w`: (Optional, custom target width)
+        *   `target_h`: (Optional, custom target height)
+    *   **Response:**
+        ```json
+        {
+          "task_id": "uuid-string",
+          "status": "pending"
+        }
+        ```
+
+*   **Check Task Progress (Status)**
+    *   **Method:** `GET`
+    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}`
+    *   **Response:**
+        ```json
+        {
+          "task_id": "uuid-string",
+          "status": "processing",
+          "progress": 45,
+          "error": null
+        }
+        ```
+
+*   **Download Completed Video (Download)**
+    *   **Method:** `GET`
+    *   **URL:** `http://123.45.67.89:8000/tasks/{task_id}/download`
+    *   **Response:** The output `.mp4` file.
+
+---
+
 ## BibTeX
 
     @InProceedings{wang2021realesrgan,
