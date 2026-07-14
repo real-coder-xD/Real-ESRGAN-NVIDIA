@@ -270,12 +270,11 @@ nohup python3 worker_api.py > worker.log 2>&1 &
 
 ### 3. Các Endpoint API sử dụng
 
-
-Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8080`):
+Địa chỉ API chính thức của VPS: `http://n3.ckey.vn:2172` (trong đó cổng `2172` ánh xạ vào cổng `8080` của container):
 
 *   **Gửi video cần xử lý (Upload)**
     *   **Method:** `POST`
-    *   **URL:** `http://123.45.67.89:8080/upload`
+    *   **URL:** `http://n3.ckey.vn:2172/upload`
     *   **Body (form-data):**
         *   `file`: (Chọn file video)
         *   `model_name`: `RealESRGAN_x4plus` (mặc định)
@@ -293,7 +292,7 @@ Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8080`):
 
 *   **Kiểm tra tiến trình (Status)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}`
+    *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}`
     *   **Response:**
         ```json
         {
@@ -306,7 +305,7 @@ Giả sử IP của VPS là `123.45.67.89` (cổng mặc định `8080`):
 
 *   **Tải xuống video hoàn tất (Download)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}/download`
+    *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}/download`
     *   **Response:** File video `.mp4` đầu ra.
 
 ---

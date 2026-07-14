@@ -281,12 +281,11 @@ nohup python3 worker_api.py > worker.log 2>&1 &
 
 ### 3. Available API Endpoints
 
-
-Assuming your VPS IP is `123.45.67.89` (default port `8080`):
+Official VPS API URL: `http://n3.ckey.vn:2172` (where port `2172` maps to `8080` in the container):
 
 *   **Upload Video for Processing**
     *   **Method:** `POST`
-    *   **URL:** `http://123.45.67.89:8080/upload`
+    *   **URL:** `http://n3.ckey.vn:2172/upload`
     *   **Body (form-data):**
         *   `file`: (Select video file)
         *   `model_name`: `RealESRGAN_x4plus` (default)
@@ -304,7 +303,7 @@ Assuming your VPS IP is `123.45.67.89` (default port `8080`):
 
 *   **Check Task Progress (Status)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}`
+    *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}`
     *   **Response:**
         ```json
         {
@@ -317,7 +316,7 @@ Assuming your VPS IP is `123.45.67.89` (default port `8080`):
 
 *   **Download Completed Video (Download)**
     *   **Method:** `GET`
-    *   **URL:** `http://123.45.67.89:8080/tasks/{task_id}/download`
+    *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}/download`
     *   **Response:** The output `.mp4` file.
 
 ---
