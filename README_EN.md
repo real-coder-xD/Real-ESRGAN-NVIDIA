@@ -319,6 +319,35 @@ Official VPS API URL: `http://n3.ckey.vn:2172` (where port `2172` maps to `8080`
     *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}/download`
     *   **Response:** The output `.mp4` file.
 
+### 4. Client Python API Usage Demo
+You can run the [client_demo.py](file:///e:/Real-ESRGAN%20NVIDIA/client_demo.py) script on your local machine to automatically interact with the API on the VPS:
+```python
+import requests
+import time
+
+API_URL = "http://n3.ckey.vn:2172"
+INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
+OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
+
+# 1. Upload video
+with open(INPUT_VIDEO_PATH, "rb") as f:
+    r = requests.post(f"{API_URL}/upload", files={"file": f}, data={"upscale": 2})
+    task_id = r.json()["task_id"]
+
+# 2. Check status
+while True:
+    task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
+    if task_info["status"] == "completed":
+        break
+    time.sleep(3)
+
+# 3. Download result
+with requests.get(f"{API_URL}/tasks/{task_id}/download", stream=True) as r:
+    with open(OUTPUT_VIDEO_PATH, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+```
+
 ---
 
 ## BibTeX

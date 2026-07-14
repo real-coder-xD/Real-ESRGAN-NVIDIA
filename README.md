@@ -308,6 +308,35 @@ nohup python3 worker_api.py > worker.log 2>&1 &
     *   **URL:** `http://n3.ckey.vn:2172/tasks/{task_id}/download`
     *   **Response:** File video `.mp4` đầu ra.
 
+### 4. Code Python gọi API chi tiết (Client)
+Bạn có thể tham khảo/chạy file [client_demo.py](file:///e:/Real-ESRGAN%20NVIDIA/client_demo.py) ở máy local để gửi video lên VPS xử lý và tải kết quả về:
+```python
+import requests
+import time
+
+API_URL = "http://n3.ckey.vn:2172"
+INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
+OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
+
+# 1. Upload video
+with open(INPUT_VIDEO_PATH, "rb") as f:
+    r = requests.post(f"{API_URL}/upload", files={"file": f}, data={"upscale": 2})
+    task_id = r.json()["task_id"]
+
+# 2. Check status
+while True:
+    task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
+    if task_info["status"] == "completed":
+        break
+    time.sleep(3)
+
+# 3. Download result
+with requests.get(f"{API_URL}/tasks/{task_id}/download", stream=True) as r:
+    with open(OUTPUT_VIDEO_PATH, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+```
+
 ---
 
 ## BibTeX
