@@ -234,14 +234,30 @@ Results are in the `results` folder
 The project is integrated with an API Worker to receive, process, and upscale videos automatically from remote clients.
 
 ### 1. Quick Setup Guide on VPS
-Run the following commands on your Ubuntu/Debian VPS:
+#### Option 1: Run directly on standard OS (Ubuntu/Debian)
 ```bash
 git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
 cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-The script automatically installs system dependencies (`ffmpeg`), installs global Python dependencies, auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8080`.
+The script automatically installs system packages and configures a systemd background daemon `esrgan.service` running at port `8080`.
+
+#### Option 2: Run inside a Docker Container (RunPod, Vast.ai, GPU Cloud)
+Docker containers usually do not support `systemd`, so you should install dependencies and run via `nohup` manually:
+```bash
+git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
+cd Real-ESRGAN-NVIDIA
+
+# Install dependencies
+python3 -m pip install fastapi uvicorn python-multipart basicsr facexlib gfpgan
+python3 setup.py develop
+
+# Run API in the background on port 8080
+nohup python3 worker_api.py > worker.log 2>&1 &
+```
+*(If utilizing Port Mapping features from GPU Clouds e.g. `2172 -> 8080`, your remote API endpoints should point to external mapped port `2172`).*
+
 
 
 ### 2. Checking VPS Information & Firewall Configuration

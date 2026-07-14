@@ -223,14 +223,30 @@ Kết quả sẽ được lưu trong thư mục `results`.
 Dự án tích hợp sẵn một API Worker để nhận diện, xử lý và nâng cấp chất lượng video tự động từ xa.
 
 ### 1. Hướng dẫn thiết lập nhanh trên VPS
-Chỉ cần chạy lệnh sau trên VPS chạy hệ điều hành Ubuntu/Debian:
+#### Trường hợp 1: Chạy trực tiếp trên hệ điều hành thường (Ubuntu/Debian)
 ```bash
 git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
 cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), cài đặt các thư viện Python toàn cục (global), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8080`.
+Hệ thống sẽ tự động cài đặt tất cả các gói cần thiết và chạy ngầm API qua systemd service `esrgan.service` tại cổng `8080`.
+
+#### Trường hợp 2: Chạy trong môi trường Docker Container (RunPod, Vast.ai, GPU Cloud)
+Môi trường Docker thường không hỗ trợ `systemd`, do đó bạn hãy cài thủ công và chạy bằng `nohup`:
+```bash
+git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
+cd Real-ESRGAN-NVIDIA
+
+# Cài đặt thư viện
+python3 -m pip install fastapi uvicorn python-multipart basicsr facexlib gfpgan
+python3 setup.py develop
+
+# Chạy ngầm API ở cổng 8080
+nohup python3 worker_api.py > worker.log 2>&1 &
+```
+*(Nếu sử dụng tính năng ánh xạ cổng (Port Mapping) của GPU Cloud ví dụ `2172 -> 8080`, từ máy local bạn sẽ gọi API qua cổng map bên ngoài là `2172`).*
+
 
 
 ### 2. Kiểm tra thông tin VPS & cấu hình Tường lửa (Firewall)
