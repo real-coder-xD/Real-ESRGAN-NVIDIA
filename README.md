@@ -230,7 +230,8 @@ cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), khởi tạo môi trường ảo Python (`venv`), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8000`.
+Hệ thống sẽ tự động cài đặt các thư viện hệ thống (`ffmpeg`), cài đặt các thư viện Python toàn cục (global), nhận dạng GPU/CPU để cài bản PyTorch tương ứng và cấu hình systemd service `esrgan.service` chạy ngầm ở cổng `8000`.
+
 
 ### 2. Kiểm tra thông tin VPS & cấu hình Tường lửa (Firewall)
 *   **Lấy IP công cộng của VPS:**

@@ -241,7 +241,8 @@ cd Real-ESRGAN-NVIDIA
 chmod +x setup_vps.sh
 ./setup_vps.sh
 ```
-The script automatically installs system dependencies (`ffmpeg`), creates a Python virtual environment (`venv`), auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8000`.
+The script automatically installs system dependencies (`ffmpeg`), installs global Python dependencies, auto-detects GPU/CPU for correct PyTorch installation, and registers a systemd daemon service `esrgan.service` running on port `8000`.
+
 
 ### 2. Checking VPS Information & Firewall Configuration
 *   **Get VPS Public IP:**
