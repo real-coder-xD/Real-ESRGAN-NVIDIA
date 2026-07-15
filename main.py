@@ -36,7 +36,7 @@ OUTPUT       = r"results"                    # Thư mục lưu kết quả
 MODEL_NAME   = "realesr-general-x4v3" 
 # DENOISE_STRENGTH: 0.3 đến 0.5 là THẬT NHẤT. 
 # Càng cao càng mịn (nhựa), càng thấp càng giữ hạt/chi tiết gốc.
-DENOISE_STRENGTH = 0.2  
+DENOISE_STRENGTH = 0.35  
 
 # --- 2. CẤU HÌNH VIDEO ---
 CRF          = 16          # 16-18 là cực nét cho 2K/4K

@@ -46,7 +46,8 @@ with requests.Session() as session:
             data={
                 "upscale": 2, 
                 "model_name": "realesr-general-x4v3", 
-                "tile": 0
+                "tile": 0,
+                "denoise_strength": 0.35
             }
         )
         if r.status_code != 200:

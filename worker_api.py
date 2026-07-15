@@ -83,13 +83,14 @@ task_queue = queue.Queue()
 # Model loader & cache
 current_model_name = None
 current_upsampler = None
+current_denoise_strength = None
 model_lock = threading.Lock()
 
-def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
-    global current_model_name, current_upsampler
+def get_upsampler(model_name, tile, denoise_strength=0.35, tile_pad=10, gpu_id=0):
+    global current_model_name, current_upsampler, current_denoise_strength
     with model_lock:
         name = model_name.split(".")[0]
-        if current_model_name == name and current_upsampler is not None:
+        if current_model_name == name and current_denoise_strength == denoise_strength and current_upsampler is not None:
             current_upsampler.tile_size = tile
             return current_upsampler
             
@@ -124,7 +125,7 @@ def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
             wdn_path = os.path.join("weights", "realesr-general-wdn-x4v3.pth")
             if os.path.exists(model_path) and os.path.exists(wdn_path):
                 model_path = [model_path, wdn_path]
-                dni_weight = [0.2, 0.8]
+                dni_weight = [denoise_strength, 1 - denoise_strength]
 
         current_upsampler = RealESRGANer(
             scale=netscale,
@@ -139,6 +140,7 @@ def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
         )
             
         current_model_name = name
+        current_denoise_strength = denoise_strength
         return current_upsampler
 
 @torch.inference_mode()
@@ -193,6 +195,7 @@ def worker():
         tile = item["tile"]
         target_w = item["target_w"]
         target_h = item["target_h"]
+        denoise_strength = item.get("denoise_strength", 0.35)
         is_image = item.get("is_image", False)
         
         tasks[task_id]["status"] = "processing"
@@ -204,7 +207,7 @@ def worker():
         tmp_video = os.path.join(RESULTS_DIR, f"_tmp_{task_id}_noaudio.mp4")
         
         try:
-            upsampler = get_upsampler(model_name, tile)
+            upsampler = get_upsampler(model_name, tile, denoise_strength=denoise_strength)
             
             if is_image:
                 img = cv2.imread(input_path)
@@ -445,7 +448,8 @@ async def upload_file(
     upscale: int = Form(2),
     tile: int = Form(512),
     target_w: int = Form(None),
-    target_h: int = Form(None)
+    target_h: int = Form(None),
+    denoise_strength: float = Form(0.35)
 ):
     task_id = str(uuid.uuid4())
     input_filename = f"{task_id}_{file.filename}"
@@ -478,6 +482,7 @@ async def upload_file(
         "tile": tile,
         "target_w": target_w,
         "target_h": target_h,
+        "denoise_strength": denoise_strength,
         "is_image": is_image
     }))
     
