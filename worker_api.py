@@ -279,38 +279,62 @@ def worker():
                 write_q = Q.Queue(maxsize=batch_size * 4)
                 thread_exc = []
 
+                def safe_put(q, item):
+                    while not thread_exc:
+                        try:
+                            q.put(item, timeout=0.1)
+                            return True
+                        except Q.Full:
+                            continue
+                    return False
+
+                def safe_get(q):
+                    while not thread_exc:
+                        try:
+                            return q.get(timeout=0.1)
+                        except Q.Empty:
+                            continue
+                    return None
+
                 def reader():
                     try:
                         v = cv2.VideoCapture(input_path)
                         while True:
+                            if thread_exc:
+                                break
                             ret, frame = v.read()
                             if not ret:
                                 break
-                            read_q.put(frame)
-                        read_q.put(None)
+                            if not safe_put(read_q, frame):
+                                break
+                        safe_put(read_q, None)
                         v.release()
                     except Exception as e:
                         thread_exc.append(e)
-                        read_q.put(None)
+                        safe_put(read_q, None)
 
                 def worker_thread_fn():
                     try:
                         batch = []
                         while True:
-                            frame = read_q.get()
+                            if thread_exc:
+                                break
+                            frame = safe_get(read_q)
                             if frame is None:
                                 if batch:
                                     if tile == 0 and torch.cuda.is_available():
                                         outs = upscale_batch(upsampler, batch, (target_h_val, target_w_val))
                                         for f in outs:
-                                            write_q.put(f)
+                                            if not safe_put(write_q, f):
+                                                break
                                     else:
                                         for f in batch:
                                             out, _ = upsampler.enhance(f, outscale=upscale)
                                             if out.shape[1] != target_w_val or out.shape[0] != target_h_val:
                                                 out = cv2.resize(out, (target_w_val, target_h_val), interpolation=cv2.INTER_LANCZOS4)
-                                            write_q.put(out)
-                                write_q.put(None)
+                                            if not safe_put(write_q, out):
+                                                break
+                                safe_put(write_q, None)
                                 break
                             
                             batch.append(frame)
@@ -318,17 +342,19 @@ def worker():
                                 if tile == 0 and torch.cuda.is_available():
                                     outs = upscale_batch(upsampler, batch, (target_h_val, target_w_val))
                                     for f in outs:
-                                        write_q.put(f)
+                                        if not safe_put(write_q, f):
+                                            break
                                 else:
                                     for f in batch:
                                         out, _ = upsampler.enhance(f, outscale=upscale)
                                         if out.shape[1] != target_w_val or out.shape[0] != target_h_val:
                                             out = cv2.resize(out, (target_w_val, target_h_val), interpolation=cv2.INTER_LANCZOS4)
-                                        write_q.put(out)
+                                        if not safe_put(write_q, out):
+                                            break
                                 batch = []
                     except Exception as e:
                         thread_exc.append(e)
-                        write_q.put(None)
+                        safe_put(write_q, None)
 
                 ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=10**8)
                 start_time = time.time()
@@ -338,10 +364,15 @@ def worker():
                     nonlocal processed_frames
                     try:
                         while True:
-                            frame = write_q.get()
+                            if thread_exc:
+                                break
+                            frame = safe_get(write_q)
                             if frame is None:
                                 break
-                            ffmpeg_proc.stdin.write(frame.tobytes())
+                            try:
+                                ffmpeg_proc.stdin.write(frame.tobytes())
+                            except BrokenPipeError as e:
+                                raise RuntimeError("FFmpeg process closed pipe early (Broken pipe). Check parameters or encoder support.") from e
                             processed_frames += 1
                             
                             elapsed = time.time() - start_time
