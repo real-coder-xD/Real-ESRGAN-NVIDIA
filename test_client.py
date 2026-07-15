@@ -49,6 +49,7 @@ with open(INPUT_VIDEO_PATH, "rb") as f:
 
 
 # 2. Check status
+start_time = time.time()
 while True:
     try:
         task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
@@ -58,7 +59,8 @@ while True:
         eta = task_info.get("eta", 0)
         
         if status == "completed":
-            print(f"\r-> Tien trinh: {progress}% - Hoan thanh!")
+            elapsed_time = time.time() - start_time
+            print(f"\r-> Tien trinh: {progress}% - Hoan thanh! (Tong thoi gian: {elapsed_time:.2f}s)")
             break
         elif status == "failed":
             print(f"\n[ERROR] Xu ly that bai: {task_info.get('error')}")
@@ -69,7 +71,7 @@ while True:
     except Exception as e:
         print(f"\nLoi khi ket noi: {e}")
         
-    time.sleep(3)
+    time.sleep(1)
 
 
 # 3. Download result
