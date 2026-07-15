@@ -9,8 +9,8 @@ import torch.nn.functional as F
 
 # Hotfix: torchvision 0.17+ removed functional_tensor, patch it for basicsr
 try:
-    from torchvision.transforms import functional as F
-    sys.modules["torchvision.transforms.functional_tensor"] = F
+    from torchvision.transforms import functional as F_tf
+    sys.modules["torchvision.transforms.functional_tensor"] = F_tf
 except ImportError:
     pass
 
