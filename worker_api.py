@@ -403,5 +403,5 @@ async def get_stats():
     return stats
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7681))
+    port = int(os.environ.get("PORT", 8888))
     uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
