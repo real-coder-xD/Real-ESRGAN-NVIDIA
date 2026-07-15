@@ -1,6 +1,7 @@
 import requests
 import time
 import socket
+import cv2
 from sshtunnel import SSHTunnelForwarder
 
 # Cau hinh SSH
@@ -13,6 +14,42 @@ LOCAL_PORT = 8090
 
 INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
 OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
+
+# 1. Hien thi menu chon do phan giai giong main.py
+print("============================================================")
+print(" CHỌN ĐỘ PHÂN GIẢI RENDER VIDEO QUA API (RTX 4080 SUPER):")
+print(" [1] 1080p | [2] 2K (1440p) | [3] 4K (2160p)")
+choice = input("Lựa chọn (mặc định 2): ").strip()
+if choice == "1":
+    resolution = "1080p"
+    max_edge = 1920
+elif choice == "3":
+    resolution = "4K"
+    max_edge = 3840
+else:
+    resolution = "2K"
+    max_edge = 2560
+
+# Doc file video local de lay thong tin va tinh target size
+cap = cv2.VideoCapture(INPUT_VIDEO_PATH)
+if not cap.isOpened():
+    print(f"[ERROR] Khong the mo file video: {INPUT_VIDEO_PATH}")
+    exit(1)
+src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+src_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+cap.release()
+
+if src_h > src_w:  # Video doc
+    target_h = max_edge
+    target_w = int(src_w * (target_h / src_h))
+    target_w = (target_w // 2) * 2
+else:  # Video ngang
+    target_w = max_edge
+    target_h = int(src_h * (target_w / src_w))
+    target_h = (target_h // 2) * 2
+
+print(f" -> Kich thuoc render: {src_w}x{src_h} -> {target_w}x{target_h} ({resolution})")
+print("============================================================")
 
 # Ham kiem tra xem port local da duoc mo san (tu start_tunnel.py) hay chua
 def is_port_open(port):
@@ -47,7 +84,9 @@ with requests.Session() as session:
                 "upscale": 2, 
                 "model_name": "realesr-general-x4v3", 
                 "tile": 0,
-                "denoise_strength": 0.35
+                "denoise_strength": 0.35,
+                "target_w": target_w,
+                "target_h": target_h
             }
         )
         if r.status_code != 200:
