@@ -96,16 +96,17 @@ def main():
     print("    Cai dat thanh cong! Khoi dong API Server...")
     print("====================================================")
     
-    # Tu dong giai phong cong 8080 neu bi chiem dung truoc khi chay
+    # Tu dong giai phong cong neu bi chiem dung truoc khi chay
     if sys.platform.startswith("linux"):
-        print("-> Dang kiem tra va giai phong cong 8080...")
+        port = int(os.environ.get("PORT", 8080))
+        print(f"-> Dang kiem tra va giai phong cong {port}...")
         try:
             import signal
-            # Quet qua /proc de tim PID chiem cong 8080
-            target_port_hex = "1F90" # 8080 in hex
+            # Quet qua /proc de tim PID chiem cong
+            target_port_hex = f"{port:04X}" # Chuyen port sang dang HEX viet hoa (vi du 8080 -> 1F90)
             pids_to_kill = set()
             
-            # Buoc 1: Xem tat ca socket kết nối o cong 8080
+            # Buoc 1: Xem tat ca socket kết nối o cong
             inodes = []
             for path in ["/proc/net/tcp", "/proc/net/tcp6"]:
                 if os.path.exists(path):
