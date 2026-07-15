@@ -11,6 +11,14 @@ import subprocess
 import torch
 import time
 import threading, queue as Q
+
+# Hotfix: torchvision 0.17+ removed functional_tensor, patch it for basicsr
+try:
+    from torchvision.transforms import functional as F_tf
+    sys.modules["torchvision.transforms.functional_tensor"] = F_tf
+except ImportError:
+    pass
+
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
