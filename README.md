@@ -308,32 +308,64 @@ nohup python3 worker_api.py > worker.log 2>&1 &
     *   **Response:** File video `.mp4` đầu ra.
 
 ### 4. Code Python gọi API chi tiết (Client)
-Bạn có thể tham khảo/chạy file [client_demo.py](file:///e:/Real-ESRGAN%20NVIDIA/client_demo.py) ở máy local để gửi video lên VPS xử lý và tải kết quả về:
+Bạn có thể tham khảo/chạy file [client_demo.py](file:///e:/Real-ESRGAN%20NVIDIA/client_demo.py) ở máy local để gửi ảnh hoặc video lên VPS xử lý và tải kết quả về:
+
 ```python
 import requests
 import time
+import os
 
 API_URL = "http://n3.ckey.vn:2172"
-INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
-OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
+INPUT_PATH = "inputs/kobe.jpg"          # Có thể là ảnh (.jpg, .png,...) hoặc video (.mp4)
+OUTPUT_PATH = "results/upscaled_kobe.jpg" # Đường dẫn lưu kết quả tương ứng
 
-# 1. Upload video
-with open(INPUT_VIDEO_PATH, "rb") as f:
-    r = requests.post(f"{API_URL}/upload", files={"file": f}, data={"upscale": 2})
-    task_id = r.json()["task_id"]
+def main():
+    if not os.path.exists(INPUT_PATH):
+        print(f"[ERROR] Không tìm thấy file: {INPUT_PATH}")
+        return
 
-# 2. Check status
-while True:
-    task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
-    if task_info["status"] == "completed":
-        break
-    time.sleep(3)
+    # 1. Upload file (Ảnh hoặc Video) lên VPS
+    print(f"\n[1/3] Đang upload file '{INPUT_PATH}' lên VPS...")
+    data = {
+        "model_name": "RealESRGAN_x4plus",  # Hoặc "realesr-animevideov3"
+        "upscale": 2,
+        "tile": 512
+    }
+    
+    with open(INPUT_PATH, "rb") as f:
+        r = requests.post(f"{API_URL}/upload", files={"file": f}, data=data)
+        task_id = r.json()["task_id"]
+        print(f"-> Upload thành công! Task ID: {task_id}")
 
-# 3. Download result
-with requests.get(f"{API_URL}/tasks/{task_id}/download", stream=True) as r:
-    with open(OUTPUT_VIDEO_PATH, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            f.write(chunk)
+    # 2. Kiểm tra tiến trình xử lý
+    print("\n[2/3] Đang xử lý trên VPS...")
+    while True:
+        task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
+        status = task_info.get("status")
+        progress = task_info.get("progress", 0)
+        
+        if status == "completed":
+            print(f"\r-> Tiến trình: {progress}% - Hoàn thành!")
+            break
+        elif status == "failed":
+            print(f"\n[ERROR] Xử lý thất bại: {task_info.get('error')}")
+            return
+        else:
+            print(f"\r-> Trạng thái: {status} | Tiến trình: {progress}%", end="", flush=True)
+            
+        time.sleep(3)
+
+    # 3. Tải kết quả về máy local
+    print(f"\n[3/3] Đang tải kết quả về '{OUTPUT_PATH}'...")
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    with requests.get(f"{API_URL}/tasks/{task_id}/download", stream=True) as r:
+        with open(OUTPUT_PATH, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    print("-> Tải về thành công!")
+
+if __name__ == "__main__":
+    main()
 ```
 
 ---
