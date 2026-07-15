@@ -103,7 +103,7 @@ def build_upsampler():
             model_path = [model_path, wdn_path]
             dni_weight = [DENOISE_STRENGTH, 1 - DENOISE_STRENGTH]
 
-    return RealESRGANer(
+    upsampler = RealESRGANer(
         scale=netscale,
         model_path=model_path,
         dni_weight=dni_weight,
@@ -114,6 +114,11 @@ def build_upsampler():
         half=torch.cuda.is_available(), # Sử dụng FP16 để tăng tốc 2x
         gpu_id=GPU_ID,
     )
+    
+    if torch.cuda.is_available():
+        upsampler.model = torch.compile(upsampler.model)
+        
+    return upsampler
 
 def print_header(mode):
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
