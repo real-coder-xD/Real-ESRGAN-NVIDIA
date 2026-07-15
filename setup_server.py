@@ -7,10 +7,26 @@ import urllib.request
 def run_cmd(cmd, shell=False):
     subprocess.run(cmd, shell=shell, check=True)
 
+def install_system_dependencies():
+    # Neu la Linux thi tu dong kiem tra va cai dat goi he thong cho OpenCV neu thieu
+    if sys.platform.startswith("linux"):
+        print("\n-> Dang kiem tra va cai dat cac thu vien do hoa hệ thong cho OpenCV...")
+        try:
+            # Thu kiem tra xem co quyen root hoac co apt-get khong
+            if os.getuid() == 0:
+                subprocess.run(["apt-get", "update"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.run(["sudo", "apt-get", "update"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["sudo", "apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
 def main():
     print("====================================================")
     print("    Bat dau setup Real-ESRGAN API Worker va Server")
     print("====================================================")
+    install_system_dependencies()
 
     # 1. Nang cap pip va kiem tra flags PEP 668
     python_exe = sys.executable
