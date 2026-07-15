@@ -139,23 +139,37 @@ def main():
             for pid in pids_to_kill:
                 if pid != current_pid:
                     try:
-                        os.kill(pid, signal.SIGKILL)
-                        print(f"-> Da tat tien trinh cu dang chiem cong: PID {pid}")
+                        # Kill ca process group de diet sach con chau cua no
+                        pgid = os.getpgid(pid)
+                        os.killpg(pgid, signal.SIGKILL)
+                        print(f"-> Da tat nhom tien trinh chiem cong: PGID {pgid}")
                     except Exception:
-                        pass
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                            print(f"-> Da tat tien trinh cu dang chiem cong: PID {pid}")
+                        except Exception:
+                            pass
                         
-            # Phòng hờ quet them uvicorn (Bắt lỗi nếu pgrep không trả về kết quả)
+            # Phòng hờ quet them tat ca tien trinh python dang chay worker_api.py hoac uvicorn bang lenh ps
             try:
-                pids = subprocess.check_output(["pgrep", "-f", "uvicorn"]).decode().split()
-                for pid in pids:
-                    if int(pid) != current_pid:
-                        os.kill(int(pid), signal.SIGKILL)
+                # Quét mọi tiến trình python liên quan
+                ps_out = subprocess.check_output(["ps", "-ef"]).decode()
+                for line in ps_out.splitlines():
+                    if "worker_api.py" in line or "uvicorn" in line:
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            pid = int(parts[1])
+                            if pid != current_pid:
+                                try:
+                                    os.kill(pid, signal.SIGKILL)
+                                except Exception:
+                                    pass
             except Exception:
                 pass
                 
-            # Đợi 3 giây để hệ thống giải phóng cổng hẳn
+            # Đợi 2 giây để hệ thống giải phóng cổng hẳn
             import time
-            time.sleep(3.0)
+            time.sleep(2.0)
         except Exception as e:
             print(f"Loi khi giai phong cong: {e}")
 
