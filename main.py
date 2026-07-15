@@ -41,7 +41,7 @@ DENOISE_STRENGTH = 0.2
 # --- 2. CẤU HÌNH VIDEO ---
 CRF          = 16          # 16-18 là cực nét cho 2K/4K
 PRESET_NVENC = "p7"        # p1-p7: p7 là chất lượng cao nhất cho RTX 4080
-USE_NVENC    = True        # Dùng nhân mã hóa phần cứng của GPU
+USE_NVENC    = False       # Dùng nhân mã hóa phần cứng của GPU (tạm tắt vì container thiếu libnvidia-encode)
 
 # --- 3. CẤU HÌNH ẢNH ---
 OUTSCALE     = 4           # Phóng 4 lần
@@ -254,12 +254,20 @@ def run_video(upsampler):
     print(f"  THIẾT LẬP: Batch Size={BATCH_SIZE}, Denoise={DENOISE_STRENGTH}, NVENC={PRESET_NVENC}\n")
 
     # FFmpeg Command
-    ffmpeg_cmd = [
-        "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
-        "-s", f"{target_w}x{target_h}", "-r", str(fps), "-i", "pipe:0", "-i", fixed_input,
-        "-c:v", "h264_nvenc", "-preset", PRESET_NVENC, "-rc", "vbr", "-cq", str(CRF), "-bf", "3",
-        "-pix_fmt", "yuv420p", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a?", "-shortest", out_path,
-    ]
+    if USE_NVENC:
+        ffmpeg_cmd = [
+            "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
+            "-s", f"{target_w}x{target_h}", "-r", str(fps), "-i", "pipe:0", "-i", fixed_input,
+            "-c:v", "h264_nvenc", "-preset", PRESET_NVENC, "-rc", "vbr", "-cq", str(CRF), "-bf", "3",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a?", "-shortest", out_path,
+        ]
+    else:
+        ffmpeg_cmd = [
+            "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
+            "-s", f"{target_w}x{target_h}", "-r", str(fps), "-i", "pipe:0", "-i", fixed_input,
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", str(CRF),
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a?", "-shortest", out_path,
+        ]
     # bufsize=10**8 (~100MB) giúp tăng tốc trao đổi dữ liệu qua pipe, triệt tiêu nghẽn I/O
     ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=10**8)
 

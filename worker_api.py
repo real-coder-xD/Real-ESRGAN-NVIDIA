@@ -164,6 +164,21 @@ def upscale_batch(upsampler, frames, target_size):
 
     return [np.transpose(outputs[i], (1, 2, 0)) for i in range(len(frames))]
 
+def check_nvenc_available():
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "2x2", "-r", "1",
+            "-i", "pipe:0", "-c:v", "h264_nvenc", "-t", "1", "-f", "null", "-"
+        ]
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc.communicate(input=b'\x00' * 12, timeout=2)
+        return proc.returncode == 0
+    except Exception:
+        return False
+
+NVENC_AVAILABLE = check_nvenc_available()
+print(f"[{datetime.utcnow()}] GPU NVENC Hardware Acceleration: {'AVAILABLE' if NVENC_AVAILABLE else 'UNAVAILABLE (Falling back to libx264)'}", flush=True)
+
 def worker():
     while True:
         task_id, item = task_queue.get()
@@ -243,7 +258,7 @@ def worker():
 
                 batch_size = 12 if tile == 0 else 1
 
-                if torch.cuda.is_available():
+                if NVENC_AVAILABLE:
                     ffmpeg_cmd = [
                         "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
                         "-s", f"{target_w_val}x{target_h_val}", "-r", str(fps), "-i", "pipe:0",
