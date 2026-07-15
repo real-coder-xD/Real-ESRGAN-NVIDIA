@@ -241,10 +241,10 @@ python3 setup.py develop
 mkdir -p weights
 wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights/
 
-# Chạy ngầm API ở cổng 8080
+# Chạy ngầm API ở cổng 8088
 nohup python3 worker_api.py > worker.log 2>&1 &
 ```
-*(Nếu sử dụng tính năng ánh xạ cổng (Port Mapping) của GPU Cloud ví dụ `2172 -> 8080`, từ máy local bạn sẽ gọi API qua cổng map bên ngoài là `2172`).*
+*(Nếu sử dụng tính năng ánh xạ cổng (Port Mapping) của GPU Cloud ví dụ `2238 -> 8088`, từ máy local bạn sẽ gọi API qua cổng map bên ngoài là `2238`).*
 
 
 
@@ -253,18 +253,18 @@ nohup python3 worker_api.py > worker.log 2>&1 &
     ```bash
     curl ifconfig.me
     ```
-*   **Kiểm tra Port 8080 đã hoạt động (LISTEN) chưa:**
+*   **Kiểm tra Port 8088 đã hoạt động (LISTEN) chưa:**
     ```bash
-    sudo ss -tulnp | grep 8080
+    sudo ss -tulnp | grep 8088
     ```
-*   **Mở Port 8080 trên tường lửa VPS (nếu bị chặn):**
+*   **Mở Port 8088 trên tường lửa VPS (nếu bị chặn):**
     *   **Ubuntu / Debian (UFW):**
         ```bash
-        sudo ufw allow 8080/tcp && sudo ufw reload
+        sudo ufw allow 8088/tcp && sudo ufw reload
         ```
     *   **CentOS / RHEL (Firewalld):**
         ```bash
-        sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload
+        sudo firewall-cmd --permanent --add-port=8088/tcp && sudo firewall-cmd --reload
         ```
 
 ### 3. Các Endpoint API sử dụng
