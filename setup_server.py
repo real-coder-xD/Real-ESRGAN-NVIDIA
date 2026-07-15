@@ -17,10 +17,10 @@ def install_system_dependencies():
             # Thu kiem tra xem co quyen root hoac co apt-get khong
             if os.getuid() == 0:
                 subprocess.run(["apt-get", "update"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(["apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1", "ffmpeg"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 subprocess.run(["sudo", "apt-get", "update"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(["sudo", "apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["sudo", "apt-get", "install", "-y", "libgl1-mesa-glx", "libglib2.0-0", "libxcb1", "ffmpeg"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             pass
 

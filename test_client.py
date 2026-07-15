@@ -48,16 +48,16 @@ while True:
         progress = task_info.get("progress", 0)
         
         if status == "completed":
-            print(f"\r-> Tiến trình: {progress}% - Hoàn thành!")
+            print(f"\r-> Tien trinh: {progress}% - Hoan thanh!")
             break
         elif status == "failed":
-            print(f"\n[ERROR] Xử lý thất bại: {task_info.get('error')}")
+            print(f"\n[ERROR] Xu ly that bai: {task_info.get('error')}")
             tunnel.stop()
             exit(1)
         else:
-            print(f"\r-> Tiến trình: {progress}%", end="", flush=True)
+            print(f"\r-> Tien trinh: {progress}%", end="", flush=True)
     except Exception as e:
-        print(f"\nLỗi khi kết nối: {e}")
+        print(f"\nLoi khi ket noi: {e}")
         
     time.sleep(3)
 

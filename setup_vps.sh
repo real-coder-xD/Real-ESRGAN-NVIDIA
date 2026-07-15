@@ -9,8 +9,13 @@ echo "===================================================="
 
 # 1. Cap nhat he thong & cai dat cac thu vien can thiet
 echo -e "\n[1/4] Dang cap nhat he thong va cai dat ffmpeg, python3, tmux..."
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip ffmpeg tmux git build-essential
+if command -v sudo &> /dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-pip ffmpeg tmux git build-essential
+else
+    apt-get update
+    apt-get install -y python3 python3-pip ffmpeg tmux git build-essential
+fi
 
 # Upgrade pip
 python3 -m pip install --upgrade pip --break-system-packages 2>/dev/null || python3 -m pip install --upgrade pip
