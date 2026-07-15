@@ -96,6 +96,20 @@ def main():
     print("    Cai dat thanh cong! Khoi dong API Server...")
     print("====================================================")
     
+    # Tu dong giai phong cong 8080 neu bi chiem dung truoc khi chay
+    if sys.platform.startswith("linux"):
+        print("-> Dang kiem tra va giai phong cong 8080...")
+        try:
+            # Dung pgrep de tim PID cua cac tien trinh chay worker_api.py hoac uvicorn
+            import signal
+            pids = subprocess.check_output(["pgrep", "-f", "worker_api.py"]).decode().split()
+            current_pid = str(os.getpid())
+            for pid in pids:
+                if pid != current_pid:
+                    os.kill(int(pid), signal.SIGKILL)
+        except Exception:
+            pass
+
     # Khoi dong server API
     try:
         run_cmd([python_exe, "worker_api.py"])
