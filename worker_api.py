@@ -2,6 +2,7 @@ import os
 import cv2
 import sys
 import torch
+import time
 import torchvision
 
 # Hotfix: torchvision 0.17+ removed functional_tensor, patch it for basicsr
@@ -185,6 +186,7 @@ def worker():
                 if n_frames <= 0:
                     raise ValueError("Could not read video frames or video is empty")
                     
+                start_time = time.time()
                 for i in range(n_frames):
                     ret, frame = cap.read()
                     if not ret:
@@ -209,7 +211,16 @@ def worker():
                     frame_path = os.path.join(tmp_dir, f"frame_{i:06d}.png")
                     cv2.imwrite(frame_path, output)
                     
+                    elapsed = time.time() - start_time
+                    current_fps = (i + 1) / elapsed
+                    eta = (n_frames - (i + 1)) / current_fps if current_fps > 0 else 0
+                    
                     tasks[task_id]["progress"] = int((i + 1) / n_frames * 100)
+                    tasks[task_id]["speed"] = round(current_fps, 2)
+                    tasks[task_id]["eta"] = int(eta)
+                    
+                    print(f"[{task_id}] Frame {i+1}/{n_frames} ({tasks[task_id]['progress']}%): {current_fps:.2f} fps, ETA: {int(eta)}s", flush=True)
+                    
                     if (i + 1) % 5 == 0:
                         update_task_db(task_id, "processing", tasks[task_id]["progress"])
                 
@@ -289,7 +300,9 @@ async def upload_file(
         "status": "pending",
         "progress": 0,
         "error": None,
-        "output_path": output_path
+        "output_path": output_path,
+        "speed": 0,
+        "eta": 0
     }
     update_task_db(task_id, "pending", 0)
     
@@ -314,7 +327,9 @@ async def get_task_status(task_id: str):
             "task_id": task_id,
             "status": task["status"],
             "progress": task["progress"],
-            "error": task["error"]
+            "error": task["error"],
+            "speed": task.get("speed", 0),
+            "eta": task.get("eta", 0)
         }
     
     # Check DB if server restarted
@@ -331,7 +346,9 @@ async def get_task_status(task_id: str):
         "task_id": task_id,
         "status": row[0],
         "progress": row[1],
-        "error": row[2]
+        "error": row[2],
+        "speed": 0,
+        "eta": 0
     }
 
 @app.get("/tasks/{task_id}/download")

@@ -46,6 +46,8 @@ while True:
         task_info = requests.get(f"{API_URL}/tasks/{task_id}").json()
         status = task_info.get("status")
         progress = task_info.get("progress", 0)
+        speed = task_info.get("speed", 0)
+        eta = task_info.get("eta", 0)
         
         if status == "completed":
             print(f"\r-> Tien trinh: {progress}% - Hoan thanh!")
@@ -55,7 +57,7 @@ while True:
             tunnel.stop()
             exit(1)
         else:
-            print(f"\r-> Tien trinh: {progress}%", end="", flush=True)
+            print(f"\r-> Tien trinh: {progress}% | Toc do: {speed} fps | ETA: {eta}s   ", end="", flush=True)
     except Exception as e:
         print(f"\nLoi khi ket noi: {e}")
         
