@@ -144,14 +144,18 @@ def main():
                     except Exception:
                         pass
                         
-            # Phòng hờ quet them uvicorn
-            pids = subprocess.check_output(["pgrep", "-f", "uvicorn"]).decode().split()
-            for pid in pids:
-                if int(pid) != current_pid:
-                    try:
+            # Phòng hờ quet them uvicorn (Bắt lỗi nếu pgrep không trả về kết quả)
+            try:
+                pids = subprocess.check_output(["pgrep", "-f", "uvicorn"]).decode().split()
+                for pid in pids:
+                    if int(pid) != current_pid:
                         os.kill(int(pid), signal.SIGKILL)
-                    except Exception:
-                        pass
+            except Exception:
+                pass
+                
+            # Đợi 1 giây để hệ thống giải phóng cổng hẳn
+            import time
+            time.sleep(1.5)
         except Exception as e:
             print(f"Loi khi giai phong cong: {e}")
 
