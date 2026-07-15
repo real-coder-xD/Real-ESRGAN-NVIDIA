@@ -149,10 +149,15 @@ def main():
                             print(f"-> Da tat tien trinh cu dang chiem cong: PID {pid}")
                         except Exception:
                             pass
-                        
+            
+            # Cố gắng sử dụng thêm fuser/lsof nếu có
+            try:
+                subprocess.run(["fuser", "-k", "8080/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            except Exception:
+                pass
+
             # Phòng hờ quet them tat ca tien trinh python dang chay worker_api.py hoac uvicorn bang lenh ps
             try:
-                # Quét mọi tiến trình python liên quan
                 ps_out = subprocess.check_output(["ps", "-ef"]).decode()
                 for line in ps_out.splitlines():
                     if "worker_api.py" in line or "uvicorn" in line:
@@ -161,15 +166,20 @@ def main():
                             pid = int(parts[1])
                             if pid != current_pid:
                                 try:
-                                    os.kill(pid, signal.SIGKILL)
+                                    # Kill cả group của tiến trình quét được
+                                    pgid = os.getpgid(pid)
+                                    os.killpg(pgid, signal.SIGKILL)
                                 except Exception:
-                                    pass
+                                    try:
+                                        os.kill(pid, signal.SIGKILL)
+                                    except Exception:
+                                        pass
             except Exception:
                 pass
                 
-            # Đợi 2 giây để hệ thống giải phóng cổng hẳn
+            # Đợi 3 giây để hệ thống giải phóng cổng hẳn
             import time
-            time.sleep(2.0)
+            time.sleep(3.0)
         except Exception as e:
             print(f"Loi khi giai phong cong: {e}")
 
