@@ -4,8 +4,10 @@ import subprocess
 import shutil
 import urllib.request
 
-def run_cmd(cmd, shell=False):
-    subprocess.run(cmd, shell=shell, check=True)
+def run_cmd(cmd, shell=False, quiet=True):
+    stdout = subprocess.DEVNULL if quiet else None
+    stderr = subprocess.DEVNULL if quiet else None
+    subprocess.run(cmd, shell=shell, check=True, stdout=stdout, stderr=stderr)
 
 def install_system_dependencies():
     # Neu la Linux thi tu dong kiem tra va cai dat goi he thong cho OpenCV neu thieu
@@ -186,7 +188,7 @@ def main():
 
     # Khoi dong server API
     try:
-        run_cmd([python_exe, "worker_api.py"])
+        run_cmd([python_exe, "worker_api.py"], quiet=False)
     except KeyboardInterrupt:
         print("\nDa dung API Server.")
 
