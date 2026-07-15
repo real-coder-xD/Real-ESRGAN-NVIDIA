@@ -155,7 +155,7 @@ def main():
             
             # Cố gắng sử dụng thêm fuser/lsof nếu có
             try:
-                subprocess.run(["fuser", "-k", "8080/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                subprocess.run(["fuser", "-k", f"{port}/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
             except Exception:
                 pass
 
