@@ -89,12 +89,6 @@ Các dự án đề xuất khác:<br>
 2. Cài đặt các thư viện phụ thuộc:
 
     ```bash
-    # Cài đặt basicsr - https://github.com/xinntao/BasicSR
-    # Chúng tôi dùng BasicSR cho cả huấn luyện và suy luận
-    pip install basicsr
-    # facexlib và gfpgan dùng cho phục hồi khuôn mặt
-    pip install facexlib
-    pip install gfpgan
     pip install -r requirements.txt
     python setup.py develop
     ```
@@ -238,9 +232,14 @@ Môi trường Docker thường không hỗ trợ `systemd`, do đó bạn hãy 
 git clone https://github.com/real-coder-xD/Real-ESRGAN-NVIDIA.git
 cd Real-ESRGAN-NVIDIA
 
-# Cài đặt thư viện
+# Cài đặt ffmpeg & thư viện
+apt-get update && apt-get install -y ffmpeg
 python3 -m pip install fastapi uvicorn python-multipart basicsr facexlib gfpgan
 python3 setup.py develop
+
+# Tải weights mô hình (hoặc chạy setup_vps.sh để tự tải hết)
+mkdir -p weights
+wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights/
 
 # Chạy ngầm API ở cổng 8080
 nohup python3 worker_api.py > worker.log 2>&1 &

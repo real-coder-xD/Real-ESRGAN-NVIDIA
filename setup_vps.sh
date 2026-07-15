@@ -37,12 +37,22 @@ python3 -m pip install $PIP_FLAGS -r requirements.txt
 python3 -m pip install $PIP_FLAGS fastapi uvicorn python-multipart
 python3 setup.py develop --user 2>/dev/null || python3 setup.py develop
 
-# Tai model mac dinh ve thu muc weights neu chua co
+# Tai tat ca cac model pre-trained ho tro ve thu muc weights
 mkdir -p weights
-if [ ! -f "weights/RealESRGAN_x4plus.pth" ]; then
-    echo "-> Tai model RealESRGAN_x4plus.pth..."
-    wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights/
-fi
+declare -A models=(
+    ["RealESRGAN_x4plus.pth"]="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+    ["RealESRGAN_x4plus_anime_6B.pth"]="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+    ["RealESRGAN_x2plus.pth"]="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth"
+    ["realesr-animevideov3.pth"]="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth"
+    ["realesr-general-x4v3.pth"]="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth"
+)
+
+for model in "${!models[@]}"; do
+    if [ ! -f "weights/$model" ]; then
+        echo "-> Tai model $model..."
+        wget "${models[$model]}" -P weights/
+    fi
+done
 
 # 4. Cau hinh Systemd Service chay tu dong
 echo -e "\n[4/4] Cau hinh Systemd de chay ngam API..."

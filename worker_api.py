@@ -89,6 +89,7 @@ def worker():
         tile = item["tile"]
         target_w = item["target_w"]
         target_h = item["target_h"]
+        is_image = item.get("is_image", False)
         
         tasks[task_id]["status"] = "processing"
         tasks[task_id]["progress"] = 0
@@ -98,64 +99,99 @@ def worker():
         tmp_video = os.path.join(RESULTS_DIR, f"_tmp_{task_id}_noaudio.mp4")
         
         try:
-            cap = cv2.VideoCapture(input_path)
-            src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            src_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            
-            if n_frames <= 0:
-                raise ValueError("Could not read video frames or video is empty")
-                
             upsampler = get_upsampler(model_name, tile)
             
-            for i in range(n_frames):
-                ret, frame = cap.read()
-                if not ret:
-                    break
+            if is_image:
+                img = cv2.imread(input_path)
+                if img is None:
+                    raise ValueError("Could not read image or image is empty")
                 
-                output, _ = upsampler.enhance(frame, outscale=upscale)
+                output, _ = upsampler.enhance(img, outscale=upscale)
                 
+                h, w = output.shape[:2]
+                final_w, final_h = w, h
                 if target_w and target_h:
-                    if output.shape[1] != target_w or output.shape[0] != target_h:
-                        output = cv2.resize(output, (target_w, target_h), interpolation=cv2.INTER_LANCZOS4)
+                    final_w, final_h = target_w, target_h
+                elif target_w:
+                    final_w = target_w
+                    final_h = int(h * (target_w / w))
+                elif target_h:
+                    final_h = target_h
+                    final_w = int(w * (target_h / h))
                 
-                frame_path = os.path.join(tmp_dir, f"frame_{i:06d}.png")
-                cv2.imwrite(frame_path, output)
+                if final_w != w or final_h != h:
+                    output = cv2.resize(output, (final_w, final_h), interpolation=cv2.INTER_LANCZOS4)
                 
-                tasks[task_id]["progress"] = int((i + 1) / n_frames * 100)
-            
-            cap.release()
-            
-            # Encode video with ffmpeg
-            ffmpeg_cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-i", os.path.join(tmp_dir, "frame_%06d.png"),
-                "-c:v", "libx264",
-                "-crf", "18",
-                "-preset", "slow",
-                "-pix_fmt", "yuv420p",
-                tmp_video,
-            ]
-            subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            # Merge audio if original video had sound
-            ffmpeg_merge = [
-                "ffmpeg", "-y",
-                "-i", tmp_video,
-                "-i", input_path,
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-map", "0:v:0",
-                "-map", "1:a?",
-                "-shortest",
-                output_path,
-            ]
-            subprocess.run(ffmpeg_merge, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            tasks[task_id]["status"] = "completed"
-            tasks[task_id]["progress"] = 100
+                cv2.imwrite(output_path, output)
+                tasks[task_id]["progress"] = 100
+                tasks[task_id]["status"] = "completed"
+            else:
+                cap = cv2.VideoCapture(input_path)
+                src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                src_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                
+                if n_frames <= 0:
+                    raise ValueError("Could not read video frames or video is empty")
+                    
+                for i in range(n_frames):
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    
+                    output, _ = upsampler.enhance(frame, outscale=upscale)
+                    
+                    h, w = output.shape[:2]
+                    final_w, final_h = w, h
+                    if target_w and target_h:
+                        final_w, final_h = target_w, target_h
+                    elif target_w:
+                        final_w = target_w
+                        final_h = int(h * (target_w / w))
+                    elif target_h:
+                        final_h = target_h
+                        final_w = int(w * (target_h / h))
+                    
+                    if final_w != w or final_h != h:
+                        output = cv2.resize(output, (final_w, final_h), interpolation=cv2.INTER_LANCZOS4)
+                    
+                    frame_path = os.path.join(tmp_dir, f"frame_{i:06d}.png")
+                    cv2.imwrite(frame_path, output)
+                    
+                    tasks[task_id]["progress"] = int((i + 1) / n_frames * 100)
+                
+                cap.release()
+                
+                # Encode video with ffmpeg
+                ffmpeg_cmd = [
+                    "ffmpeg", "-y",
+                    "-framerate", str(fps),
+                    "-i", os.path.join(tmp_dir, "frame_%06d.png"),
+                    "-c:v", "libx264",
+                    "-crf", "18",
+                    "-preset", "slow",
+                    "-pix_fmt", "yuv420p",
+                    tmp_video,
+                ]
+                subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                # Merge audio if original video had sound
+                ffmpeg_merge = [
+                    "ffmpeg", "-y",
+                    "-i", tmp_video,
+                    "-i", input_path,
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-map", "0:v:0",
+                    "-map", "1:a?",
+                    "-shortest",
+                    output_path,
+                ]
+                subprocess.run(ffmpeg_merge, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                tasks[task_id]["status"] = "completed"
+                tasks[task_id]["progress"] = 100
             
         except Exception as e:
             tasks[task_id]["status"] = "failed"
@@ -174,7 +210,7 @@ worker_thread = threading.Thread(target=worker, daemon=True)
 worker_thread.start()
 
 @app.post("/upload")
-async def upload_video(
+async def upload_file(
     file: UploadFile = File(...),
     model_name: str = Form("RealESRGAN_x4plus"),
     upscale: int = Form(2),
@@ -189,7 +225,10 @@ async def upload_video(
     with open(input_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    output_filename = f"upscaled_{task_id}.mp4"
+    ext = os.path.splitext(file.filename)[1].lower()
+    is_image = ext in [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"]
+    
+    output_filename = f"upscaled_{task_id}{ext}" if is_image else f"upscaled_{task_id}.mp4"
     output_path = os.path.join(RESULTS_DIR, output_filename)
     
     tasks[task_id] = {
@@ -206,7 +245,8 @@ async def upload_video(
         "upscale": upscale,
         "tile": tile,
         "target_w": target_w,
-        "target_h": target_h
+        "target_h": target_h,
+        "is_image": is_image
     }))
     
     return {"task_id": task_id, "status": "pending"}
@@ -236,9 +276,20 @@ async def download_result(task_id: str):
     if not os.path.exists(task["output_path"]):
         raise HTTPException(status_code=404, detail="Upscaled file not found on disk")
         
+    ext = os.path.splitext(task["output_path"])[1].lower()
+    media_types = {
+        ".mp4": "video/mp4",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".bmp": "image/bmp",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+        
     return FileResponse(
         task["output_path"],
-        media_type="video/mp4",
+        media_type=media_type,
         filename=os.path.basename(task["output_path"])
     )
 

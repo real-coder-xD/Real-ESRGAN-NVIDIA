@@ -179,12 +179,6 @@ Usage: realesrgan-ncnn-vulkan.exe -i infile -o outfile [options]...
 2. 安装各种依赖
 
     ```bash
-    # 安装 basicsr - https://github.com/xinntao/BasicSR
-    # 我们使用BasicSR来训练以及推断
-    pip install basicsr
-    # facexlib和gfpgan是用来增强人脸的
-    pip install facexlib
-    pip install gfpgan
     pip install -r requirements.txt
     python setup.py develop
     ```
