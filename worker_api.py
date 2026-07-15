@@ -15,6 +15,9 @@ from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 
+import sqlite3
+from datetime import datetime, timedelta
+
 # Set output encoding to UTF-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -25,7 +28,43 @@ RESULTS_DIR = "results"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-# In-memory task database
+# SQLite database setup
+DB_PATH = "results/tasks.db"
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            task_id TEXT PRIMARY KEY,
+            status TEXT,
+            progress INTEGER,
+            error TEXT,
+            output_path TEXT,
+            created_at TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def update_task_db(task_id, status, progress, error=None, output_path=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    if output_path:
+        cursor.execute(
+            "INSERT INTO tasks (task_id, status, progress, error, output_path, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET status=?, progress=?, error=?, output_path=?",
+            (task_id, status, progress, error, output_path, datetime.utcnow(), status, progress, error, output_path)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO tasks (task_id, status, progress, error, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET status=?, progress=?, error=?",
+            (task_id, status, progress, error, datetime.utcnow(), status, progress, error)
+        )
+    conn.commit()
+    conn.close()
+
+# In-memory active task database (keeps track of running progress)
 tasks = {}
 task_queue = queue.Queue()
 
@@ -93,6 +132,7 @@ def worker():
         
         tasks[task_id]["status"] = "processing"
         tasks[task_id]["progress"] = 0
+        update_task_db(task_id, "processing", 0)
         
         tmp_dir = os.path.join(RESULTS_DIR, f"_tmp_{task_id}")
         os.makedirs(tmp_dir, exist_ok=True)
@@ -125,6 +165,7 @@ def worker():
                 cv2.imwrite(output_path, output)
                 tasks[task_id]["progress"] = 100
                 tasks[task_id]["status"] = "completed"
+                update_task_db(task_id, "completed", 100, output_path=output_path)
             else:
                 cap = cv2.VideoCapture(input_path)
                 src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -160,6 +201,8 @@ def worker():
                     cv2.imwrite(frame_path, output)
                     
                     tasks[task_id]["progress"] = int((i + 1) / n_frames * 100)
+                    if (i + 1) % 5 == 0:
+                        update_task_db(task_id, "processing", tasks[task_id]["progress"])
                 
                 cap.release()
                 
@@ -192,10 +235,12 @@ def worker():
                 
                 tasks[task_id]["status"] = "completed"
                 tasks[task_id]["progress"] = 100
+                update_task_db(task_id, "completed", 100, output_path=output_path)
             
         except Exception as e:
             tasks[task_id]["status"] = "failed"
             tasks[task_id]["error"] = str(e)
+            update_task_db(task_id, "failed", tasks[task_id]["progress"], error=str(e))
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             if os.path.exists(tmp_video):
@@ -237,6 +282,7 @@ async def upload_file(
         "error": None,
         "output_path": output_path
     }
+    update_task_db(task_id, "pending", 0)
     
     task_queue.put((task_id, {
         "input_path": input_path,
@@ -253,30 +299,57 @@ async def upload_file(
 
 @app.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
+    if task_id in tasks:
+        task = tasks[task_id]
+        return {
+            "task_id": task_id,
+            "status": task["status"],
+            "progress": task["progress"],
+            "error": task["error"]
+        }
     
-    task = tasks[task_id]
+    # Check DB if server restarted
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT status, progress, error FROM tasks WHERE task_id=?", (task_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
     return {
         "task_id": task_id,
-        "status": task["status"],
-        "progress": task["progress"],
-        "error": task["error"]
+        "status": row[0],
+        "progress": row[1],
+        "error": row[2]
     }
 
 @app.get("/tasks/{task_id}/download")
 async def download_result(task_id: str):
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = tasks[task_id]
-    if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Task is not completed (current status: {task['status']})")
+    output_path = None
+    if task_id in tasks:
+        task = tasks[task_id]
+        if task["status"] != "completed":
+            raise HTTPException(status_code=400, detail=f"Task is not completed (current status: {task['status']})")
+        output_path = task["output_path"]
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT status, output_path FROM tasks WHERE task_id=?", (task_id,))
+        row = cursor.fetchone()
+        conn.close()
         
-    if not os.path.exists(task["output_path"]):
+        if not row:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if row[0] != "completed":
+            raise HTTPException(status_code=400, detail=f"Task is not completed (current status: {row[0]})")
+        output_path = row[1]
+        
+    if not output_path or not os.path.exists(output_path):
         raise HTTPException(status_code=404, detail="Upscaled file not found on disk")
         
-    ext = os.path.splitext(task["output_path"])[1].lower()
+    ext = os.path.splitext(output_path)[1].lower()
     media_types = {
         ".mp4": "video/mp4",
         ".png": "image/png",
@@ -288,11 +361,37 @@ async def download_result(task_id: str):
     media_type = media_types.get(ext, "application/octet-stream")
         
     return FileResponse(
-        task["output_path"],
+        output_path,
         media_type=media_type,
-        filename=os.path.basename(task["output_path"])
+        filename=os.path.basename(output_path)
     )
+
+@app.get("/stats")
+async def get_stats():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    now = datetime.utcnow()
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    def count_since(dt):
+        cursor.execute("SELECT COUNT(*) FROM tasks WHERE created_at >= ?", (dt,))
+        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tasks WHERE created_at >= ? AND status='completed'", (dt,))
+        completed = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tasks WHERE created_at >= ? AND status='failed'", (dt,))
+        failed = cursor.fetchone()[0]
+        return {"total": total, "completed": completed, "failed": failed}
+
+    stats = {
+        "last_24h": count_since(day_ago),
+        "last_7d": count_since(week_ago),
+        "last_30d": count_since(month_ago)
+    }
+    conn.close()
+    return stats
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
-
