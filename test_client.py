@@ -1,7 +1,7 @@
 import requests
 import time
 
-API_URL = "http://n3.ckey.vn:2172"
+API_URL = "http://n3.ckey.vn:8088"
 INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
 OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
 
