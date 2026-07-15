@@ -4,6 +4,8 @@ import sys
 import torch
 import time
 import torchvision
+import numpy as np
+import torch.nn.functional as F
 
 # Hotfix: torchvision 0.17+ removed functional_tensor, patch it for basicsr
 try:
@@ -109,12 +111,25 @@ def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
         else:
             raise ValueError(f"Unknown model: {name}")
 
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
         model_path = os.path.join("weights", f"{name}.pth")
         use_half = torch.cuda.is_available()
+
+        dni_weight = None
+        if name == "realesr-general-x4v3":
+            wdn_path = os.path.join("weights", "realesr-general-wdn-x4v3.pth")
+            if os.path.exists(model_path) and os.path.exists(wdn_path):
+                model_path = [model_path, wdn_path]
+                dni_weight = [0.2, 0.8]
 
         current_upsampler = RealESRGANer(
             scale=netscale,
             model_path=model_path,
+            dni_weight=dni_weight,
             model=model,
             tile=tile,
             tile_pad=tile_pad,
@@ -124,6 +139,30 @@ def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
         )
         current_model_name = name
         return current_upsampler
+
+@torch.inference_mode()
+def upscale_batch(upsampler, frames, target_size):
+    device = upsampler.device
+    model = upsampler.model
+
+    tensors = []
+    for img in frames:
+        t = torch.from_numpy(img).permute(2, 0, 1)
+        if device.type == 'cuda':
+            t = t.pin_memory()
+        tensors.append(t.to(device, non_blocking=True).half().div(255.0))
+        
+    batch_t = torch.stack(tensors)
+    batch_t = batch_t[:, [2, 1, 0], :, :] # BGR -> RGB
+
+    outputs_t = model(batch_t)
+
+    outputs_t = F.interpolate(outputs_t, size=target_size, mode='bilinear', align_corners=False)
+
+    outputs_t = outputs_t[:, [2, 1, 0], :, :].clamp(0, 1).mul(255.0).round().to(torch.uint8)
+    outputs = outputs_t.cpu().numpy()
+
+    return [np.transpose(outputs[i], (1, 2, 0)) for i in range(len(frames))]
 
 def worker():
     while True:
@@ -185,59 +224,137 @@ def worker():
                 
                 if n_frames <= 0:
                     raise ValueError("Could not read video frames or video is empty")
-                    
-                start_time = time.time()
-                for i in range(n_frames):
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    
-                    output, _ = upsampler.enhance(frame, outscale=upscale)
-                    
-                    h, w = output.shape[:2]
-                    final_w, final_h = w, h
-                    if target_w and target_h:
-                        final_w, final_h = target_w, target_h
-                    elif target_w:
-                        final_w = target_w
-                        final_h = int(h * (target_w / w))
-                    elif target_h:
-                        final_h = target_h
-                        final_w = int(w * (target_h / h))
-                    
-                    if final_w != w or final_h != h:
-                        output = cv2.resize(output, (final_w, final_h), interpolation=cv2.INTER_LANCZOS4)
-                    
-                    frame_path = os.path.join(tmp_dir, f"frame_{i:06d}.png")
-                    cv2.imwrite(frame_path, output)
-                    
-                    elapsed = time.time() - start_time
-                    current_fps = (i + 1) / elapsed
-                    eta = (n_frames - (i + 1)) / current_fps if current_fps > 0 else 0
-                    
-                    tasks[task_id]["progress"] = int((i + 1) / n_frames * 100)
-                    tasks[task_id]["speed"] = round(current_fps, 2)
-                    tasks[task_id]["eta"] = int(eta)
-                    
-                    print(f"[{task_id}] Frame {i+1}/{n_frames} ({tasks[task_id]['progress']}%): {current_fps:.2f} fps, ETA: {int(eta)}s", flush=True)
-                    
-                    if (i + 1) % 5 == 0:
-                        update_task_db(task_id, "processing", tasks[task_id]["progress"])
-                
                 cap.release()
+
+                if target_w and target_h:
+                    target_w_val, target_h_val = target_w, target_h
+                elif target_w:
+                    target_w_val = target_w
+                    target_h_val = int(src_h * (target_w / src_w))
+                elif target_h:
+                    target_h_val = target_h
+                    target_w_val = int(src_w * (target_h / src_h))
+                else:
+                    target_w_val = int(src_w * upscale)
+                    target_h_val = int(src_h * upscale)
+
+                target_w_val = (target_w_val // 2) * 2
+                target_h_val = (target_h_val // 2) * 2
+
+                batch_size = 12 if tile == 0 else 1
+
+                if torch.cuda.is_available():
+                    ffmpeg_cmd = [
+                        "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
+                        "-s", f"{target_w_val}x{target_h_val}", "-r", str(fps), "-i", "pipe:0",
+                        "-c:v", "h264_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "16", "-bf", "3",
+                        "-pix_fmt", "yuv420p", tmp_video
+                    ]
+                else:
+                    ffmpeg_cmd = [
+                        "ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "bgr24",
+                        "-s", f"{target_w_val}x{target_h_val}", "-r", str(fps), "-i", "pipe:0",
+                        "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                        "-pix_fmt", "yuv420p", tmp_video
+                    ]
+
+                import queue as Q
+                read_q = Q.Queue(maxsize=batch_size * 4)
+                write_q = Q.Queue(maxsize=batch_size * 4)
+                thread_exc = []
+
+                def reader():
+                    try:
+                        v = cv2.VideoCapture(input_path)
+                        while True:
+                            ret, frame = v.read()
+                            if not ret:
+                                break
+                            read_q.put(frame)
+                        read_q.put(None)
+                        v.release()
+                    except Exception as e:
+                        thread_exc.append(e)
+                        read_q.put(None)
+
+                def worker_thread_fn():
+                    try:
+                        batch = []
+                        while True:
+                            frame = read_q.get()
+                            if frame is None:
+                                if batch:
+                                    if tile == 0 and torch.cuda.is_available():
+                                        outs = upscale_batch(upsampler, batch, (target_h_val, target_w_val))
+                                        for f in outs:
+                                            write_q.put(f)
+                                    else:
+                                        for f in batch:
+                                            out, _ = upsampler.enhance(f, outscale=upscale)
+                                            if out.shape[1] != target_w_val or out.shape[0] != target_h_val:
+                                                out = cv2.resize(out, (target_w_val, target_h_val), interpolation=cv2.INTER_LANCZOS4)
+                                            write_q.put(out)
+                                write_q.put(None)
+                                break
+                            
+                            batch.append(frame)
+                            if len(batch) == batch_size:
+                                if tile == 0 and torch.cuda.is_available():
+                                    outs = upscale_batch(upsampler, batch, (target_h_val, target_w_val))
+                                    for f in outs:
+                                        write_q.put(f)
+                                else:
+                                    for f in batch:
+                                        out, _ = upsampler.enhance(f, outscale=upscale)
+                                        if out.shape[1] != target_w_val or out.shape[0] != target_h_val:
+                                            out = cv2.resize(out, (target_w_val, target_h_val), interpolation=cv2.INTER_LANCZOS4)
+                                        write_q.put(out)
+                                batch = []
+                    except Exception as e:
+                        thread_exc.append(e)
+                        write_q.put(None)
+
+                ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=10**8)
+                start_time = time.time()
+                processed_frames = 0
+
+                def writer():
+                    nonlocal processed_frames
+                    try:
+                        while True:
+                            frame = write_q.get()
+                            if frame is None:
+                                break
+                            ffmpeg_proc.stdin.write(frame.tobytes())
+                            processed_frames += 1
+                            
+                            elapsed = time.time() - start_time
+                            current_fps = processed_frames / elapsed if elapsed > 0 else 0
+                            eta = (n_frames - processed_frames) / current_fps if current_fps > 0 else 0
+                            
+                            tasks[task_id]["progress"] = min(int(processed_frames / n_frames * 100), 99)
+                            tasks[task_id]["speed"] = round(current_fps, 2)
+                            tasks[task_id]["eta"] = int(eta)
+                            
+                            if processed_frames % 5 == 0:
+                                update_task_db(task_id, "processing", tasks[task_id]["progress"])
+                    except Exception as e:
+                        thread_exc.append(e)
+
+                t1 = threading.Thread(target=reader)
+                t2 = threading.Thread(target=worker_thread_fn)
+                t3 = threading.Thread(target=writer)
                 
-                # Encode video with ffmpeg
-                ffmpeg_cmd = [
-                    "ffmpeg", "-y",
-                    "-framerate", str(fps),
-                    "-i", os.path.join(tmp_dir, "frame_%06d.png"),
-                    "-c:v", "libx264",
-                    "-crf", "18",
-                    "-preset", "slow",
-                    "-pix_fmt", "yuv420p",
-                    tmp_video,
-                ]
-                subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                for t in [t1, t2, t3]:
+                    t.start()
+                for t in [t1, t2, t3]:
+                    t.join()
+
+                ffmpeg_proc.stdin.close()
+                ffmpeg_proc.wait()
+
+                if thread_exc:
+                    raise thread_exc[0]
                 
                 # Merge audio if original video had sound
                 ffmpeg_merge = [
