@@ -98,7 +98,7 @@ def main():
     
     # Tu dong giai phong cong neu bi chiem dung truoc khi chay
     if sys.platform.startswith("linux"):
-        port = int(os.environ.get("PORT", 8080))
+        port = int(os.environ.get("PORT", 8088))
         print(f"-> Dang kiem tra va giai phong cong {port}...")
         try:
             import signal
