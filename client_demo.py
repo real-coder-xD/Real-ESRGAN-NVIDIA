@@ -3,7 +3,7 @@ import time
 import os
 
 # Cau hinh dia chi API VPS cua ban
-API_URL = "http://n3.ckey.vn:2238"
+API_URL = "http://n3.ckey.vn:2240"
 
 # File video can upscale o may local
 INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"

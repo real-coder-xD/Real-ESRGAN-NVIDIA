@@ -269,11 +269,11 @@ nohup python3 worker_api.py > worker.log 2>&1 &
 
 ### 3. Các Endpoint API sử dụng
 
-Địa chỉ API chính thức của VPS: `http://n3.ckey.vn:2238` (trong đó cổng `2238` ánh xạ vào cổng `7681` của container):
+Địa chỉ API chính thức của VPS: `http://n3.ckey.vn:2240` (trong đó cổng `2240` ánh xạ vào cổng `8888` của container):
 
 *   **Gửi video cần xử lý (Upload)**
     *   **Method:** `POST`
-    *   **URL:** `http://n3.ckey.vn:2238/upload`
+    *   **URL:** `http://n3.ckey.vn:2240/upload`
     *   **Body (form-data):**
         *   `file`: (Chọn file video)
         *   `model_name`: `RealESRGAN_x4plus` (mặc định)
@@ -291,7 +291,7 @@ nohup python3 worker_api.py > worker.log 2>&1 &
 
 *   **Kiểm tra tiến trình (Status)**
     *   **Method:** `GET`
-    *   **URL:** `http://n3.ckey.vn:2238/tasks/{task_id}`
+    *   **URL:** `http://n3.ckey.vn:2240/tasks/{task_id}`
     *   **Response:**
         ```json
         {
@@ -304,7 +304,7 @@ nohup python3 worker_api.py > worker.log 2>&1 &
 
 *   **Tải xuống video hoàn tất (Download)**
     *   **Method:** `GET`
-    *   **URL:** `http://n3.ckey.vn:2238/tasks/{task_id}/download`
+    *   **URL:** `http://n3.ckey.vn:2240/tasks/{task_id}/download`
     *   **Response:** File video `.mp4` đầu ra.
 
 ### 4. Code Python gọi API chi tiết (Client)
@@ -315,7 +315,7 @@ import requests
 import time
 import os
 
-API_URL = "http://n3.ckey.vn:2238"
+API_URL = "http://n3.ckey.vn:2240"
 INPUT_PATH = "inputs/kobe.jpg"          # Có thể là ảnh (.jpg, .png,...) hoặc video (.mp4)
 OUTPUT_PATH = "results/upscaled_kobe.jpg" # Đường dẫn lưu kết quả tương ứng
 
