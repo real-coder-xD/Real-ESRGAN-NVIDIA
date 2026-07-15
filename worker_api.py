@@ -1,12 +1,21 @@
 import os
 import cv2
+import sys
 import torch
+import torchvision
+
+# Hotfix: torchvision 0.17+ removed functional_tensor, patch it for basicsr
+try:
+    from torchvision.transforms import functional as F
+    sys.modules["torchvision.transforms.functional_tensor"] = F
+except ImportError:
+    pass
+
 import shutil
 import subprocess
 import queue
 import threading
 import uuid
-import sys
 import io
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
