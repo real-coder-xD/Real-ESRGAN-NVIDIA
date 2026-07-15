@@ -27,7 +27,15 @@ OUTPUT_VIDEO_PATH = "results/upscaled_result.mp4"
 
 # 2. Upload video
 with open(INPUT_VIDEO_PATH, "rb") as f:
-    r = requests.post(f"{API_URL}/upload", files={"file": f}, data={"upscale": 2})
+    r = requests.post(
+        f"{API_URL}/upload", 
+        files={"file": f}, 
+        data={
+            "upscale": 2, 
+            "model_name": "realesr-general-x4v3", 
+            "tile": 0
+        }
+    )
     if r.status_code != 200:
         print(f"Server returned status {r.status_code}: {r.text}")
         tunnel.stop()
