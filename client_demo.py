@@ -53,7 +53,7 @@ def upscale_video_client():
                 print(f"\n[ERROR] Xu ly video that bai: {task_info.get('error')}")
                 return
             else:
-                print(f"\r-> Trang thai: {status} | Tien trinh: {progress}%", end="", flush=True)
+                print(f"\r-> Tien trinh: {progress}%", end="", flush=True)
                 
         except Exception as e:
             print(f"\n[WARNING] Loi khi lay trang thai: {e}")

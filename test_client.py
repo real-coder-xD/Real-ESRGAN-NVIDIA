@@ -32,7 +32,7 @@ while True:
             print(f"\n[ERROR] Xử lý thất bại: {task_info.get('error')}")
             exit(1)
         else:
-            print(f"\r-> Trạng thái: {status} | Tiến trình: {progress}%", end="", flush=True)
+            print(f"\r-> Tiến trình: {progress}%", end="", flush=True)
     except Exception as e:
         print(f"\nLỗi khi kết nối: {e}")
         

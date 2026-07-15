@@ -351,7 +351,7 @@ def main():
             print(f"\n[ERROR] Xử lý thất bại: {task_info.get('error')}")
             return
         else:
-            print(f"\r-> Trạng thái: {status} | Tiến trình: {progress}%", end="", flush=True)
+            print(f"\r-> Tiến trình: {progress}%", end="", flush=True)
             
         time.sleep(3)
 
