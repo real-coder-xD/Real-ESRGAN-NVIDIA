@@ -153,9 +153,9 @@ def main():
             except Exception:
                 pass
                 
-            # Đợi 1 giây để hệ thống giải phóng cổng hẳn
+            # Đợi 3 giây để hệ thống giải phóng cổng hẳn
             import time
-            time.sleep(1.5)
+            time.sleep(3.0)
         except Exception as e:
             print(f"Loi khi giai phong cong: {e}")
 
