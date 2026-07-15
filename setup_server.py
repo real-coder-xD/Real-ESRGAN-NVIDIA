@@ -100,15 +100,60 @@ def main():
     if sys.platform.startswith("linux"):
         print("-> Dang kiem tra va giai phong cong 8080...")
         try:
-            # Dung pgrep de tim PID cua cac tien trinh chay worker_api.py hoac uvicorn
             import signal
-            pids = subprocess.check_output(["pgrep", "-f", "worker_api.py"]).decode().split()
-            current_pid = str(os.getpid())
-            for pid in pids:
+            # Quet qua /proc de tim PID chiem cong 8080
+            target_port_hex = "1F90" # 8080 in hex
+            pids_to_kill = set()
+            
+            # Buoc 1: Xem tat ca socket kết nối o cong 8080
+            inodes = []
+            for path in ["/proc/net/tcp", "/proc/net/tcp6"]:
+                if os.path.exists(path):
+                    with open(path, "r") as f:
+                        lines = f.readlines()[1:]
+                        for line in lines:
+                            parts = line.strip().split()
+                            if len(parts) >= 10:
+                                local_address = parts[1]
+                                local_port = local_address.split(":")[-1]
+                                if local_port.upper() == target_port_hex:
+                                    inodes.append(parts[9])
+                                    
+            # Buoc 2: Tim PID so khop voi inode
+            if inodes:
+                for pid in os.listdir("/proc"):
+                    if pid.isdigit():
+                        fd_dir = os.path.join("/proc", pid, "fd")
+                        if os.path.exists(fd_dir):
+                            try:
+                                for fd in os.listdir(fd_dir):
+                                    link = os.readlink(os.path.join(fd_dir, fd))
+                                    for inode in inodes:
+                                        if inode in link:
+                                            pids_to_kill.add(int(pid))
+                            except Exception:
+                                pass
+                                
+            # Kill processes
+            current_pid = os.getpid()
+            for pid in pids_to_kill:
                 if pid != current_pid:
-                    os.kill(int(pid), signal.SIGKILL)
-        except Exception:
-            pass
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        print(f"-> Da tat tien trinh cu dang chiem cong: PID {pid}")
+                    except Exception:
+                        pass
+                        
+            # Phòng hờ quet them uvicorn
+            pids = subprocess.check_output(["pgrep", "-f", "uvicorn"]).decode().split()
+            for pid in pids:
+                if int(pid) != current_pid:
+                    try:
+                        os.kill(int(pid), signal.SIGKILL)
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"Loi khi giai phong cong: {e}")
 
     # Khoi dong server API
     try:
