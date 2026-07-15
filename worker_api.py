@@ -137,9 +137,6 @@ def get_upsampler(model_name, tile, tile_pad=10, gpu_id=0):
             half=use_half,
             gpu_id=gpu_id,
         )
-        
-        if torch.cuda.is_available():
-            current_upsampler.model = torch.compile(current_upsampler.model)
             
         current_model_name = name
         return current_upsampler

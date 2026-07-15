@@ -114,9 +114,6 @@ def build_upsampler():
         half=torch.cuda.is_available(), # Sử dụng FP16 để tăng tốc 2x
         gpu_id=GPU_ID,
     )
-    
-    if torch.cuda.is_available():
-        upsampler.model = torch.compile(upsampler.model)
         
     return upsampler
 
