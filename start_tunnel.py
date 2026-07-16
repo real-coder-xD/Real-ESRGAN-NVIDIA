@@ -3,7 +3,7 @@ import sys
 from sshtunnel import SSHTunnelForwarder
 
 SSH_HOST = "n1.ckey.vn"
-SSH_PORT = 2237
+SSH_PORT = 1959
 SSH_USER = "root"
 SSH_PASS = "MD2107fc"
 API_INTERNAL_PORT = 8090

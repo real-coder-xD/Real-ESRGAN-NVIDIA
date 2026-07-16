@@ -7,13 +7,13 @@ from sshtunnel import SSHTunnelForwarder
 
 # Cau hinh SSH
 SSH_HOST = "n1.ckey.vn"
-SSH_PORT = 2237
+SSH_PORT = 1959
 SSH_USER = "root"
 SSH_PASS = "MD2107fc"
 API_INTERNAL_PORT = 8090
 LOCAL_PORT = 8090
 
-INPUT_VIDEO_PATH = "videos/720x1080x15s.mp4"
+INPUT_VIDEO_PATH = "videos/16x9x720x1080x15s_test_2.mp4"
 RESOLUTIONS = {
     "1080p": 1920,
     "2K": 2560,
@@ -50,11 +50,16 @@ else:
     API_URL = f"http://127.0.0.1:{tunnel.local_bind_port}"
     print(f"[SSH] Tunnel tam thoi khoi tao tai: {API_URL}")
 
+try:
+    os.makedirs("results", exist_ok=True)
+except Exception:
+    pass
+
 # Lam viec theo Session de giu ket noi TCP va toi uu toc do request
 with requests.Session() as session:
     for res_name, max_edge in RESOLUTIONS.items():
         print(f"\n============================================================")
-        print(f" BẮT ĐẦU THỬ NGHIỆM ĐỘ PHÂN GIẢI: {res_name} (Max Edge = {max_edge})")
+        print(f" BATCH START RESOLUTION: {res_name} (Max Edge = {max_edge})")
         print(f"============================================================")
         
         # Tinh toan kich thuoc target size cho resolution hien tai
@@ -79,7 +84,7 @@ with requests.Session() as session:
                     "upscale": 2, 
                     "model_name": "realesr-general-x4v3", 
                     "tile": 0,
-                    "denoise_strength": 0.35,
+                    "denoise_strength": 0.7,
                     "target_w": target_w,
                     "target_h": target_h
                 }
@@ -94,7 +99,7 @@ with requests.Session() as session:
                 print(f"Error parsing JSON. Status: {r.status_code}, Response: {r.text}")
                 if tunnel: tunnel.stop()
                 raise e
-
+ 
         # 2. Check status
         print("[2/3] Dang xu ly video tren VPS...")
         start_time = time.time()
@@ -120,18 +125,17 @@ with requests.Session() as session:
                 print(f"\nLoi khi ket noi: {e}")
                 
             time.sleep(1)
-
+ 
         # 3. Download result
         output_path = f"results/upscaled_result_{res_name}.mp4"
-        os.makedirs("results", exist_ok=True)
         print(f"[3/3] Dang tai video ve...")
         with session.get(f"{API_URL}/tasks/{task_id}/download", stream=True) as r:
             with open(output_path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
         print(f"-> Hoan thanh {res_name}! File luu tai: {output_path}")
-
-print(f"\n>>> TAT CA QUAC TRINH THU NGHIEM 1K, 2K, 4K HOAN THANH THANH CONG! <<<")
+ 
+print(f"\n>>> TEST HOAN THANH THANH CONG! <<<")
 # Dong SSH Tunnel neu duoc khoi tao tam thoi trong file nay
 if tunnel:
     tunnel.stop()

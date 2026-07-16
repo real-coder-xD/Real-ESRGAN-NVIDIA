@@ -418,7 +418,11 @@ def worker():
                     "-shortest",
                     output_path,
                 ]
-                subprocess.run(ffmpeg_merge, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                try:
+                    subprocess.run(ffmpeg_merge, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+                except subprocess.TimeoutExpired:
+                    print(f"[WARNING] FFmpeg merge audio/video timed out. Copying video only.", flush=True)
+                    shutil.copy2(tmp_video, output_path)
                 
                 tasks[task_id]["status"] = "completed"
                 tasks[task_id]["progress"] = 100
